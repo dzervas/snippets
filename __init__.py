@@ -2,6 +2,7 @@ import binaryninja as bn
 import binaryninjaui as ui
 
 from .snippet_base import load_all_snippets, run_last_snippet
+from .python_snippet import PythonSnippet as _
 
 load_all_snippets()
 

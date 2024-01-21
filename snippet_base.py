@@ -26,8 +26,8 @@ class Snippet():
 
 	@property
 	def label(self) -> str:
-		if "description" in self.metadata.keys() and self.metadata["description"]:
-			return self.metadata["description"]
+		if hasattr(self.metadata, "description") and self.metadata.description:
+			return self.metadata.description
 		return self.name
 
 	def edit(self) -> None:
@@ -42,8 +42,10 @@ class Snippet():
 	def runner(self, **kwargs) -> None:
 		raise NotImplementedError
 
-	def run(self, **kwargs) -> None:
+	def run(self, _context: Optional[UIContext] = None, **kwargs) -> None:
+		global _LAST_SNIPPET
 		_LAST_SNIPPET = self
+
 		class Runner(bn.BackgroundTaskThread):
 			def __init__(self, snippet: Snippet) -> None:
 				super().__init__(f"Running snippet '{snippet.label}'...")
@@ -86,18 +88,18 @@ class Snippet():
 		with open(SNIPPETS_PATH / self.name, "w") as f:
 			f.write(self.code)
 
-	@staticmethod
-	def load(path: Union[str, Path]) -> Self:
+	@classmethod
+	def load(cls: Type[Self], path: Union[str, Path]) -> Self:
 		if not isinstance(path, Path):
 			path = Path(path)
 
 		with open(path, "r") as f:
 			code = f.read()
 
-		return Self(path.name, code)
+		return cls(path.name, code)
 
 	@property
-	def metadata(self) -> dict:
+	def metadata(self) -> NamedTuple:
 		result = {}
 
 		index = 0
@@ -126,7 +128,7 @@ class Snippet():
 
 			result[result_key] = result_value
 
-		return result
+		return namedtuple("metadata", result.keys())(*result.values())
 
 	@metadata.setter
 	def metadata(self, value: dict) -> None:
@@ -178,16 +180,17 @@ def load_all_snippets(_context: Optional[UIContext] = None) -> List[Snippet]:
 		UIAction.unregisterAction(action)
 
 	for path in SNIPPETS_PATH.iterdir():
+		bn.log_info(path)
 		try:
 			snip = load_snippet(path)
 		except ValueError:
 			continue
 
 		metadata = snip.metadata
-		if metadata.hotkey:
+		if hasattr(metadata, "hotkey") and metadata.hotkey:
 			UIAction.registerAction(snip.label, metadata.hotkey)
 		else:
 			UIAction.registerAction(snip.label)
 
-		UIActionHandler.globalActions().bindAction(f"Snippets\\{snip.label}", action)
+		UIActionHandler.globalActions().bindAction(f"Snippets\\{snip.label}", UIAction(snip.run))
 		Menu.mainMenu("Plugins").addAction(f"Snippets\\{snip.label}", "Snippets")
