@@ -1,18 +1,22 @@
 import sys
 from typing import Optional
+import binaryninja as bn
 import binaryninjaui as ui
 
 from binaryninja.settings import Settings
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QFileSystemModel, QTreeView, QSplitter, QItemSelectionModel, QAbstractItemView, QHeaderView, QFileSystemWatcher, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QMenu, QAction, QFileDialog, QMessageBox, QInputDialog
-from PySide6.QtGui import QKeySequence, QIcon, QFontMetrics
-from PySide6.QtCore import Qt, QSettings, QFileSystemWatcher
+from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QFileSystemModel, QTreeView, QSplitter, QAbstractItemView, QHeaderView, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout, QDialog
+from PySide6.QtGui import QKeySequence, QIcon, QFontMetrics, QWindow
+from PySide6.QtCore import Qt, QSettings, QFileSystemWatcher, QItemSelectionModel
 
 from .QCodeEditor import QCodeEditor, Pylighter
 from .snippet_base import SNIPPETS_PATH
 
 class Editor(QWidget):
-	def __init__(self, context: ui.UIContext, parent: QWidget | None = ...) -> None:
-		super(Editor, self).__init__(parent)
+	def __init__(self, context: ui.UIContext, parent: QWidget | None = None) -> None:
+		# super(Editor, self).__init__(parent)
+		QWidget.__init__(self, parent)
+
+		snippets_path_abs = str(SNIPPETS_PATH.resolve())
 
 		self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 		self.title = QLabel(self.tr("Snippet Editor"))
@@ -33,7 +37,7 @@ class Editor(QWidget):
 		self.deleteSnippetButton = QPushButton("Delete")
 		self.newSnippetButton = QPushButton("New Snippet")
 		self.watcher = QFileSystemWatcher()
-		self.watcher.addPath(SNIPPETS_PATH)
+		self.watcher.addPath(snippets_path_abs)
 		# self.watcher.directoryChanged.connect(self.snippetDirectoryChanged)
 		# self.watcher.fileChanged.connect(self.snippetDirectoryChanged)
 		indentation = Settings().get_string("snippets.indentation")
@@ -56,7 +60,7 @@ class Editor(QWidget):
 		self.snippetDescription.setPlaceholderText("optional description")
 
 		#Make disabled edit boxes visually distinct
-		self.setStyleSheet("QLineEdit:disabled, QCodeEditor:disabled { background-color: palette(window); }");
+		self.setStyleSheet("QLineEdit:disabled, QCodeEditor:disabled { background-color: palette(window); }")
 
 
 		#Set Editbox Size
@@ -70,7 +74,7 @@ class Editor(QWidget):
 
 		#Files
 		self.files = QFileSystemModel()
-		self.files.setRootPath(SNIPPETS_PATH)
+		self.files.setRootPath(snippets_path_abs)
 		self.files.setReadOnly(False)
 
 		#Tree
@@ -84,7 +88,7 @@ class Editor(QWidget):
 		# self.tree.customContextMenuRequested.connect(self.contextMenu)
 		self.tree.hideColumn(2)
 		self.tree.sortByColumn(0, Qt.AscendingOrder)
-		self.tree.setRootIndex(self.files.index(SNIPPETS_PATH))
+		self.tree.setRootIndex(self.files.index(snippets_path_abs))
 		for x in range(self.columns):
 			#self.tree.resizeColumnToContents(x)
 			self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
@@ -163,17 +167,34 @@ class Editor(QWidget):
 		# self.deleteSnippetButton.clicked.connect(self.deleteSnippet)
 		# self.browseButton.clicked.connect(self.browseSnippets)
 
-		if self.settings.contains("ui/snippeteditor/selected"):
-			selectedName = self.settings.value("ui/snippeteditor/selected")
-			self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+		# if self.settings.contains("ui/snippeteditor/selected"):
+		# 	selectedName = self.settings.value("ui/snippeteditor/selected")
+		# 	self.tree.selectionModel().select(self.files.index(selectedName), QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
-			if self.tree.selectionModel().hasSelection():
-				self.selectFile(self.tree.selectionModel().selection(), None)
-				self.edit.setFocus()
-				cursor = self.edit.textCursor()
-				cursor.setPosition(self.edit.document().characterCount()-1)
-				self.edit.setTextCursor(cursor)
-			else:
-				self.readOnly(True)
-		else:
-			self.readOnly(True)
+		# 	if self.tree.selectionModel().hasSelection():
+		# 		self.selectFile(self.tree.selectionModel().selection(), None)
+		# 		self.edit.setFocus()
+		# 		cursor = self.edit.textCursor()
+		# 		cursor.setPosition(self.edit.document().characterCount()-1)
+		# 		self.edit.setTextCursor(cursor)
+		# 	else:
+		# 		self.readOnly(True)
+		# else:
+		# 	self.readOnly(True)
+
+	@staticmethod
+	def createPane(context):
+		if not context.context:
+			return
+
+		# TODO: Add the option to open the editor in its own window
+		# It's possible if WidgetPane and openPane are not called but shiboken
+		# drops them from memory and the window is destroyed an unhandled exception
+		# at the end of __init__ fixes that but that's horrible
+		widget = Editor(context)
+		pane = ui.WidgetPane(widget, "Snippet Editor")
+		context.context.openPane(pane)
+
+	@staticmethod
+	def canCreatePane(context):
+		return context.context
