@@ -1,7 +1,7 @@
 from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, ClickableIcon
 from PySide6.QtCore import Qt, QFileSystemWatcher, QRectF, QSize
-from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap
-from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit
+from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap, QCursor
+from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu
 
 from .utils import makePlusMenuIcon, makeReloadIcon
 from .snippet_base import SNIPPETS_PATH
@@ -42,10 +42,12 @@ class SnippetSidebar(SidebarWidget):
 		self.tree.setDefaultDropAction(Qt.MoveAction)
 		self.tree.setSortingEnabled(True)
 		self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-		# self.tree.customContextMenuRequested.connect(self.contextMenu)
+		self.tree.customContextMenuRequested.connect(self.contextMenu)
 		self.tree.hideColumn(2)
 		self.tree.sortByColumn(0, Qt.AscendingOrder)
 		self.tree.setRootIndex(self.files.index(snippets_path_abs))
+		# self.tree.doubleClicked.connect(self.openSnippet)
+
 		for x in range(self.files.columnCount() - 1):
 			self.tree.resizeColumnToContents(x)
 			self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
@@ -98,6 +100,26 @@ class SnippetSidebar(SidebarWidget):
 	def headerWidget(self):
 		return self._headerWidget
 
+	def contextMenu(self, position):
+		menu = QMenu()
+
+		run = menu.addAction("Run")
+		# run.triggered.connect(self.runSnippet)
+
+		menu.addSeparator()
+		copyPath = menu.addAction("Copy Path")
+		# copyPath.triggered.connect(self.copyPath)
+		duplicate = menu.addAction("Duplicate")
+		# duplicate.triggered.connect(self.duplicateSnippet)
+		delete = menu.addAction("Delete")
+		# delete.triggered.connect(self.deleteSnippet)
+
+		menu.addSeparator()
+		newFolder = menu.addAction("New Folder")
+		# newFolder.triggered.connect(self.newFolder)
+
+		menu.exec_(QCursor.pos())
+
 
 class SnippetSidebarType(SidebarWidgetType):
 	def __init__(self):
@@ -108,7 +130,7 @@ class SnippetSidebarType(SidebarWidgetType):
 		p.begin(icon)
 		p.setFont(QFont("Open Sans", 56))
 		p.setPen(QColor(255, 255, 255, 255))
-		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "F")
+		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "S")
 		p.end()
 
 		SidebarWidgetType.__init__(self, icon, "Snippet Editor")
