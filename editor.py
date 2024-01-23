@@ -20,6 +20,8 @@ class Editor(QWidget):
 
 		self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 		self.title = QLabel(self.tr("Snippet Editor"))
+		self.setWindowTitle(self.title.text())
+
 		self.saveButton = QPushButton(self.tr("&Save"))
 		self.saveButton.setShortcut(QKeySequence(self.tr("Ctrl+Shift+S")))
 		self.exportButton = QPushButton(self.tr("&Export to plugin"))
@@ -30,16 +32,7 @@ class Editor(QWidget):
 		self.updateAnalysis = QCheckBox(self.tr("Update analysis when run"))
 		self.clearHotkeyButton = QPushButton(self.tr("Clear Hotkey"))
 		# self.updateAnalysis.stateChanged.connect(self.setGlobalUpdateFlag)
-		self.setWindowTitle(self.title.text())
-		#self.newFolderButton = QPushButton("New Folder")
-		self.browseButton = QPushButton("Browse Snippets")
-		self.browseButton.setIcon(QIcon.fromTheme("edit-undo"))
-		self.deleteSnippetButton = QPushButton("Delete")
-		self.newSnippetButton = QPushButton("New Snippet")
-		self.watcher = QFileSystemWatcher()
-		self.watcher.addPath(snippets_path_abs)
-		# self.watcher.directoryChanged.connect(self.snippetDirectoryChanged)
-		# self.watcher.fileChanged.connect(self.snippetDirectoryChanged)
+
 		indentation = Settings().get_string("snippets.indentation")
 		highlighter = None
 		if Settings().get_bool("snippets.syntaxHighlight"):
@@ -47,7 +40,6 @@ class Editor(QWidget):
 		self.edit = QCodeEditor(SyntaxHighlighter=highlighter, delimeter=indentation)
 		self.edit.setPlaceholderText("Insert your snippet code here")
 		self.resetting = False
-		self.columns = 3
 		self.context = context
 
 		self.keySequenceEdit = QKeySequenceEdit(self)
@@ -62,7 +54,6 @@ class Editor(QWidget):
 		#Make disabled edit boxes visually distinct
 		self.setStyleSheet("QLineEdit:disabled, QCodeEditor:disabled { background-color: palette(window); }")
 
-
 		#Set Editbox Size
 		font = ui.getMonospaceFont(self)
 		self.edit.setFont(font)
@@ -72,38 +63,6 @@ class Editor(QWidget):
 		# if Settings().get_bool("snippets.inde"):
 		self.edit.setTabStopDistance(4 * font.horizontalAdvance(' ')) #TODO, replace with settings API
 
-		#Files
-		self.files = QFileSystemModel()
-		self.files.setRootPath(snippets_path_abs)
-		self.files.setReadOnly(False)
-
-		#Tree
-		self.tree = QTreeView()
-		self.tree.setModel(self.files)
-		self.tree.setDragDropMode(QAbstractItemView.InternalMove)
-		self.tree.setDragEnabled(True)
-		self.tree.setDefaultDropAction(Qt.MoveAction)
-		self.tree.setSortingEnabled(True)
-		self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-		# self.tree.customContextMenuRequested.connect(self.contextMenu)
-		self.tree.hideColumn(2)
-		self.tree.sortByColumn(0, Qt.AscendingOrder)
-		self.tree.setRootIndex(self.files.index(snippets_path_abs))
-		for x in range(self.columns):
-			#self.tree.resizeColumnToContents(x)
-			self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
-
-		treeLayout = QVBoxLayout()
-		treeLayout.addWidget(self.tree)
-
-		treeButtons = QHBoxLayout()
-		treeButtons.addWidget(self.browseButton)
-		treeButtons.addWidget(self.newSnippetButton)
-		treeButtons.addWidget(self.deleteSnippetButton)
-		treeLayout.addLayout(treeButtons)
-
-		treeWidget = QWidget()
-		treeWidget.setLayout(treeLayout)
 
 		# Create layout and add widgets
 		optionsAndButtons = QVBoxLayout()
@@ -136,14 +95,8 @@ class Editor(QWidget):
 		vlayout.addLayout(optionsAndButtons)
 		vlayoutWidget.setLayout(vlayout)
 
-		hsplitter = QSplitter()
-		hsplitter.addWidget(treeWidget)
-		hsplitter.addWidget(vlayoutWidget)
-
 		hlayout = QHBoxLayout()
-		hlayout.addWidget(hsplitter)
-
-		self.showNormal() #Fixes bug that maximized windows are "stuck"
+		hlayout.addWidget(vlayout)
 
 		self.settings = QSettings("Vector 35", "Snippet Editor")
 
