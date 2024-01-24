@@ -1,10 +1,11 @@
+from pathlib import Path
 from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, ClickableIcon
-from PySide6.QtCore import Qt, QFileSystemWatcher, QRectF, QSize
-from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap, QCursor
-from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu
+from PySide6.QtCore import Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
+from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap, QCursor, QGuiApplication
+from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter, QLayout
 
 from .utils import makePlusMenuIcon, makeReloadIcon
-from .snippet_base import SNIPPETS_PATH
+from .snippet_base import SNIPPETS_PATH, load_all_snippets
 
 
 class SnippetSidebar(SidebarWidget):
@@ -52,42 +53,29 @@ class SnippetSidebar(SidebarWidget):
 			self.tree.resizeColumnToContents(x)
 			self.tree.header().setSectionResizeMode(x, QHeaderView.ResizeToContents)
 
-		treeLayout = QVBoxLayout()
-		treeLayout.setSpacing(0)
-		treeLayout.setContentsMargins(0, 0, 0, 0)
-		treeLayout.addWidget(self.tree)
+		self.output = QTreeView()
 
-		# treeButtons = QHBoxLayout()
-		# treeButtons.addWidget(self.browseButton)
-		# treeButtons.addWidget(self.newSnippetButton)
-		# treeButtons.addWidget(self.deleteSnippetButton)
-		# treeLayout.addLayout(treeButtons)
+		self.treeSplitter = QSplitter(Qt.Vertical)
+		self.treeSplitter.addWidget(self.tree)
+		self.treeSplitter.addWidget(self.output)
+		self.treeSplitter.setChildrenCollapsible(True)
 
-		# treeWidget = QWidget()
-		# treeWidget.setLayout(treeLayout)
+		self.treeLayout = QVBoxLayout()
+		self.treeLayout.setSpacing(0)
+		self.treeLayout.setContentsMargins(0, 0, 0, 0)
+		self.treeLayout.addWidget(self.treeSplitter)
+		self.treeSplitter.setSizes([100000, 200000])
 
-		# vlayout = QVBoxLayout()
-		# vlayout.addWidget(self.tree)
-		# vlayout.addWidget(treeButtons)
-		#vlayout.addWidget(self.newFolderButton)
-		self.setLayout(treeLayout)
-		# self.show()
-		# self.addWidget(self.tree)
+		self.setLayout(self.treeLayout)
 
+		# Header
 		self.search = QLineEdit()
 		self.search.setPlaceholderText("Search Snippets")
 
-		addIcon = QPixmap(QSize(56, 56))
-		# addIcon.fill(0)
-		addIconPainter = QPainter()
-		addIconPainter.begin(addIcon)
-		addIconPainter.setFont(QFont("Open Sans", 56))
-		addIconPainter.setPen(QColor(255, 255, 255, 255))
-		addIconPainter.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "+")
-		addIconPainter.end()
-
 		self.addButton = ClickableIcon(makePlusMenuIcon(), QSize(20, 20))
+		# self.addButton.clicked.connect(self.newSnippet)
 		self.refreshButton = ClickableIcon(makeReloadIcon(), QSize(20, 20))
+		self.addButton.clicked.connect(load_all_snippets)
 
 		self.headerWidgetLayout = QHBoxLayout()
 		self.headerWidgetLayout.setContentsMargins(0, 0, 0, 0)
@@ -108,17 +96,57 @@ class SnippetSidebar(SidebarWidget):
 
 		menu.addSeparator()
 		copyPath = menu.addAction("Copy Path")
-		# copyPath.triggered.connect(self.copyPath)
+		copyPath.triggered.connect(self.copyPath)
 		duplicate = menu.addAction("Duplicate")
 		# duplicate.triggered.connect(self.duplicateSnippet)
 		delete = menu.addAction("Delete")
-		# delete.triggered.connect(self.deleteSnippet)
+		delete.triggered.connect(self.deleteSnippet)
 
 		menu.addSeparator()
 		newFolder = menu.addAction("New Folder")
-		# newFolder.triggered.connect(self.newFolder)
+		newFolder.triggered.connect(self.newFolder)
 
 		menu.exec_(QCursor.pos())
+
+	def copyPath(self):
+		index = self.tree.selectionModel().currentIndex()
+		selection = self.files.filePath(index)
+		clip = QGuiApplication.clipboard()
+		clip.setText(selection)
+
+	def deleteSnippet(self):
+		# index = self.tree.selectedIndexes()[::self.files.columnCount() - 1][0] # treeview returns each selected element in the row
+		index = self.tree.selectionModel().currentIndex()
+		snippetName = self.files.fileName(index)
+
+		if self.files.isDir(index):
+			questionText = self.tr("Confirm deletion of folder AND ALL CONTENTS: ")
+		else:
+			questionText = self.tr("Confirm deletion of snippet: ")
+
+		question = QMessageBox.question(self, self.tr("Confirm"), questionText + snippetName)
+
+		if (question != QMessageBox.StandardButton.Yes):
+			return
+
+		self.tree.clearSelection()
+		# log_debug("Snippets: Deleting %s." % snippetName)
+		# if snippetName == example_name:
+		# 	question = QMessageBox.question(self, self.tr("Confirm"), self.tr("Should snippets prevent this file from being recreated?"))
+		# 	if (question == QMessageBox.StandardButton.Yes):
+		# 		Path(rm_dst_examples).touch()
+		self.files.remove(index)
+		load_all_snippets()
+
+	def newFolder(self):
+		(folderName, ok) = QInputDialog.getText(self, self.tr("Create New Folder"), self.tr("New Folder Name: "))
+		if ok and folderName:
+			index = self.tree.selectionModel().currentIndex()
+			selection = self.files.filePath(index)
+			if QFileInfo(selection).isDir():
+				QDir(selection).mkdir(folderName)
+			else:
+				QDir(str(SNIPPETS_PATH.resolve())).mkdir(folderName)
 
 
 class SnippetSidebarType(SidebarWidgetType):

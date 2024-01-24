@@ -180,6 +180,9 @@ def load_all_snippets(_context: Optional[UIContext] = None) -> List[Snippet]:
 		UIAction.unregisterAction(action)
 
 	for path in SNIPPETS_PATH.iterdir():
+		if not path.is_file():
+			continue
+
 		bn.log_info(path)
 		try:
 			snip = load_snippet(path)
