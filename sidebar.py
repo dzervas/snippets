@@ -1,10 +1,13 @@
+import binaryninja as bn
 from pathlib import Path
-from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, ClickableIcon
-from PySide6.QtCore import Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
+from typing import Any, Union
+from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, ClickableIcon, UIContext
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
 from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap, QCursor, QGuiApplication
 from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter, QLayout
 
-from .utils import makePlusMenuIcon, makeReloadIcon
+from .editor import Editor
+from .utils import getContext, makePlusMenuIcon, makeReloadIcon
 from .snippet_base import SNIPPETS_PATH, load_all_snippets
 
 
@@ -31,7 +34,7 @@ class SnippetSidebar(SidebarWidget):
 		self.setStyleSheet("QLineEdit:disabled, QCodeEditor:disabled { background-color: palette(window); }")
 
 		# Files
-		self.files = QFileSystemModel()
+		self.files = SnippetModel()
 		self.files.setRootPath(snippets_path_abs)
 		self.files.setReadOnly(False)
 
@@ -47,7 +50,7 @@ class SnippetSidebar(SidebarWidget):
 		self.tree.hideColumn(2)
 		self.tree.sortByColumn(0, Qt.AscendingOrder)
 		self.tree.setRootIndex(self.files.index(snippets_path_abs))
-		# self.tree.doubleClicked.connect(self.openSnippet)
+		self.tree.doubleClicked.connect(self.openSnippet)
 
 		for x in range(self.files.columnCount() - 1):
 			self.tree.resizeColumnToContents(x)
@@ -148,6 +151,20 @@ class SnippetSidebar(SidebarWidget):
 			else:
 				QDir(str(SNIPPETS_PATH.resolve())).mkdir(folderName)
 
+	def openSnippet(self, index):
+		if self.files.isDir(index):
+			return
+
+		self.tree.clearSelection()
+		# self.tree.selectionModel().select(index, QAbstractItemView.Select | QAbstractItemView.Rows)
+		editor = Editor.createPane(getContext())
+		editor.openSnippet(self.files.filePath(index))
+		# self.selectFile(self.tree.selectionModel().selection(), None)
+		# self.edit.setFocus()
+		# cursor = self.edit.textCursor()
+		# cursor.setPosition(self.edit.document().characterCount()-1)
+		# self.edit.setTextCursor(cursor)
+
 
 class SnippetSidebarType(SidebarWidgetType):
 	def __init__(self):
@@ -165,6 +182,17 @@ class SnippetSidebarType(SidebarWidgetType):
 
 	def createWidget(self, frame, data):
 		return SnippetSidebar(frame, data)
+
+
+class SnippetModel(QFileSystemModel):
+	def data(self, index: QModelIndex | QPersistentModelIndex, role: int = ...) -> Any:
+		parent = super().data(index, role)
+
+		if self.isDir(index):
+			return parent
+
+		# bn.log.log_info(f"{index.row()}, {index.column()}: {parent}")
+		return parent
 
 
 Sidebar.addSidebarWidgetType(SnippetSidebarType())

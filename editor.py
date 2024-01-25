@@ -1,5 +1,6 @@
+from pathlib import Path
 import sys
-from typing import Optional
+from typing import Optional, Self, Union
 import binaryninja as bn
 import binaryninjaui as ui
 
@@ -13,10 +14,7 @@ from .snippet_base import SNIPPETS_PATH
 
 class Editor(QWidget):
 	def __init__(self, context: ui.UIContext, parent: QWidget | None = None) -> None:
-		# super(Editor, self).__init__(parent)
 		QWidget.__init__(self, parent)
-
-		snippets_path_abs = str(SNIPPETS_PATH.resolve())
 
 		self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 		self.title = QLabel(self.tr("Snippet Editor"))
@@ -88,15 +86,17 @@ class Editor(QWidget):
 		description.addWidget(QLabel(self.tr("Description: ")))
 		description.addWidget(self.snippetDescription)
 
-		vlayoutWidget = QWidget()
+		# vlayoutWidget = QWidget()
 		vlayout = QVBoxLayout()
+		# margins = vlayout.getContentsMargins()
+		# vlayout.setContentsMargins(0, margins[1], 0, margins[3])
 		vlayout.addLayout(description)
 		vlayout.addWidget(self.edit)
 		vlayout.addLayout(optionsAndButtons)
-		vlayoutWidget.setLayout(vlayout)
+		# vlayoutWidget.setLayout(vlayout)
 
-		hlayout = QHBoxLayout()
-		hlayout.addWidget(vlayout)
+		# hlayout = QHBoxLayout()
+		# hlayout.addWidget(vlayout)
 
 		self.settings = QSettings("Vector 35", "Snippet Editor")
 
@@ -107,7 +107,7 @@ class Editor(QWidget):
 			self.edit.setMinimumHeight(30 * font.lineSpacing())
 
 		# Set dialog layout
-		self.setLayout(hlayout)
+		self.setLayout(vlayout)
 
 		# Add signals
 		# self.saveButton.clicked.connect(self.save)
@@ -136,8 +136,8 @@ class Editor(QWidget):
 		# 	self.readOnly(True)
 
 	@staticmethod
-	def createPane(context):
-		if not context.context:
+	def createPane(context) -> Self:
+		if not Editor.canCreatePane(context):
 			return
 
 		# TODO: Add the option to open the editor in its own window
@@ -146,8 +146,22 @@ class Editor(QWidget):
 		# at the end of __init__ fixes that but that's horrible
 		widget = Editor(context)
 		pane = ui.WidgetPane(widget, "Snippet Editor")
+
+		# if not context.binaryView:
+			# pane.moveToNewWindow()
+
 		context.context.openPane(pane)
+		bn.log.log_info(f"{dir(context.context)}")
+		return widget
 
 	@staticmethod
-	def canCreatePane(context):
-		return context.context
+	def canCreatePane(context) -> bool:
+		# return context.context
+		return True
+
+	def openSnippet(self, path: Union[Path, str]):
+		if not isinstance(path, Path):
+			path = Path(path)
+
+		self.edit.clear()
+		self.edit.setPlainText(path.read_text())
