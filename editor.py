@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QFileSyst
 from PySide6.QtGui import QKeySequence, QIcon, QFontMetrics, QWindow
 from PySide6.QtCore import Qt, QSettings, QFileSystemWatcher, QItemSelectionModel
 
-from .QCodeEditor import QCodeEditor, Pylighter
+from .QCodeEditor import QCodeEditor, QPygmentsHighlighter
 from .snippet_base import SNIPPETS_PATH, load_snippet
 
 class Editor(QWidget):
@@ -33,10 +33,7 @@ class Editor(QWidget):
 		# self.updateAnalysis.stateChanged.connect(self.setGlobalUpdateFlag)
 
 		indentation = Settings().get_string("snippets.indentation")
-		highlighter = None
-		if Settings().get_bool("snippets.syntaxHighlight"):
-			highlighter = Pylighter
-		self.edit = QCodeEditor(SyntaxHighlighter=highlighter, delimeter=indentation)
+		self.edit = QCodeEditor(delimeter=indentation)
 		self.edit.setPlaceholderText("Insert your snippet code here")
 		self.resetting = False
 		self.context = context
@@ -161,8 +158,10 @@ class Editor(QWidget):
 		return True
 
 	def openSnippet(self, path: Union[Path, str]):
-		self.snippet = load_snippet(path)
-		bn.log.log_info(f"{self.snippet}")
+		try:
+			self.snippet = load_snippet(path)
+		except ValueError:
+			return
 
 		self.edit.clear()
 		self.edit.setPlainText(self.snippet.code)

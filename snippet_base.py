@@ -30,6 +30,10 @@ class Snippet():
 			return self.metadata.description
 		return self.name
 
+	@classmethod
+	def isValid(cls, path: Path) -> bool:
+		return cls.file_extension != "" and path.is_file() and path.name.endswith(cls.file_extension)
+
 	def edit(self) -> None:
 		raise NotImplementedError
 
@@ -161,6 +165,13 @@ def run_last_snippet(context: UIContext) -> None:
 	if _LAST_SNIPPET:
 		# TODO: Background?
 		_LAST_SNIPPET.run()
+
+def is_valid_snippet(path: Union[str, Path]) -> bool:
+	for snippet_type in _SNIPPET_TYPES:
+		if snippet_type.isValid(path):
+			return True
+
+	return False
 
 def load_snippet(path: Union[str, Path]) -> Snippet:
 	for snippet_type in _SNIPPET_TYPES:

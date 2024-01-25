@@ -44,6 +44,7 @@ class SnippetSidebar(SidebarWidget):
 		self.tree.setDragDropMode(QAbstractItemView.InternalMove)
 		self.tree.setDragEnabled(True)
 		self.tree.setDefaultDropAction(Qt.MoveAction)
+		self.tree.setEditTriggers(QAbstractItemView.EditKeyPressed | QAbstractItemView.SelectedClicked)
 		self.tree.setSortingEnabled(True)
 		self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
 		self.tree.customContextMenuRequested.connect(self.contextMenu)
