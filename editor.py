@@ -1,16 +1,17 @@
 from pathlib import Path
 import sys
-from typing import Optional, Self, Union
+from typing import List, Union
 import binaryninja as bn
 import binaryninjaui as ui
 
 from binaryninja.settings import Settings
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QFileSystemModel, QTreeView, QSplitter, QAbstractItemView, QHeaderView, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout, QDialog
-from PySide6.QtGui import QKeySequence, QIcon, QFontMetrics, QWindow
-from PySide6.QtCore import Qt, QSettings, QFileSystemWatcher, QItemSelectionModel
+from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout
+from PySide6.QtGui import QKeySequence, QFontMetrics
+from PySide6.QtCore import Qt, QSettings
 
-from .QCodeEditor import QCodeEditor, QPygmentsHighlighter
+from .QCodeEditor import QCodeEditor
 from .snippet_base import SNIPPETS_PATH, load_snippet
+
 
 class Editor(QWidget):
 	def __init__(self, context: ui.UIContext, parent: QWidget | None = None) -> None:
@@ -134,7 +135,8 @@ class Editor(QWidget):
 		# 	self.readOnly(True)
 
 	@staticmethod
-	def createPane(context) -> Self:
+	def createPane(context) -> "Editor":
+		global EDITORS
 		if not Editor.canCreatePane(context):
 			return
 
@@ -143,13 +145,18 @@ class Editor(QWidget):
 		# drops them from memory and the window is destroyed an unhandled exception
 		# at the end of __init__ fixes that but that's horrible
 		widget = Editor(context)
+		EDITORS.append(widget)
 		pane = ui.WidgetPane(widget, "Snippet Editor")
+
+		def onEditorClose():
+			EDITORS.remove(widget)
+
+		widget.destroyed.connect(onEditorClose)
 
 		# if not context.binaryView:
 			# pane.moveToNewWindow()
 
 		context.context.openPane(pane)
-		bn.log.log_info(f"{dir(context.context)}")
 		return widget
 
 	@staticmethod
@@ -158,10 +165,14 @@ class Editor(QWidget):
 		return True
 
 	def openSnippet(self, path: Union[Path, str]):
-		try:
-			self.snippet = load_snippet(path)
-		except ValueError:
-			return
+		self.snippet = load_snippet(path)
+		code = self.snippet.renderableCode
 
 		self.edit.clear()
-		self.edit.setPlainText(self.snippet.code)
+
+		if hasattr(self.edit, "number_bar") and self.edit.number_bar is not None:
+			self.edit.number_bar.offset = code[0]
+
+		self.edit.setPlainText(code[1])
+
+EDITORS: List[Editor] = []

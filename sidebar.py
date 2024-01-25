@@ -1,14 +1,12 @@
 import binaryninja as bn
-from pathlib import Path
-from typing import Any, Union
-from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, ClickableIcon, UIContext
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
-from PySide6.QtGui import QIcon, QImage, QPainter, QColor, QFont, QPixmap, QCursor, QGuiApplication
-from PySide6.QtWidgets import QPushButton, QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter, QLayout
+from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, ClickableIcon
+from PySide6.QtCore import QModelIndex, QPoint, Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
+from PySide6.QtGui import QImage, QPainter, QColor, QFont, QCursor, QGuiApplication
+from PySide6.QtWidgets import QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter
 
-from .editor import Editor
+from .editor import Editor, EDITORS
 from .utils import getContext, makePlusMenuIcon, makeReloadIcon
-from .snippet_base import SNIPPETS_PATH, load_all_snippets
+from .snippet_base import SNIPPETS_PATH, load_all_snippets, load_snippet
 
 
 class SnippetSidebar(SidebarWidget):
@@ -18,23 +16,16 @@ class SnippetSidebar(SidebarWidget):
 		self.data = data
 		snippets_path_abs = str(SNIPPETS_PATH.resolve())
 
-		self.actionHandler = UIActionHandler()
-		self.actionHandler.setupActionHandler(self)
-
-		self.browseButton = QPushButton("Browse Snippets")
-		self.browseButton.setIcon(QIcon.fromTheme("edit-undo"))
-		self.deleteSnippetButton = QPushButton("Delete")
-		self.newSnippetButton = QPushButton("New Snippet")
 		self.watcher = QFileSystemWatcher()
 		self.watcher.addPath(snippets_path_abs)
-		# self.watcher.directoryChanged.connect(self.snippetDirectoryChanged)
-		# self.watcher.fileChanged.connect(self.snippetDirectoryChanged)
+		self.watcher.directoryChanged.connect(load_all_snippets)
+		self.watcher.fileChanged.connect(load_all_snippets)
 
 		# Make disabled edit boxes visually distinct
 		self.setStyleSheet("QLineEdit:disabled, QCodeEditor:disabled { background-color: palette(window); }")
 
 		# Files
-		self.files = SnippetModel()
+		self.files = QFileSystemModel()
 		self.files.setRootPath(snippets_path_abs)
 		self.files.setReadOnly(False)
 
@@ -51,7 +42,7 @@ class SnippetSidebar(SidebarWidget):
 		self.tree.hideColumn(2)
 		self.tree.sortByColumn(0, Qt.AscendingOrder)
 		self.tree.setRootIndex(self.files.index(snippets_path_abs))
-		self.tree.doubleClicked.connect(self.openSnippet)
+		self.tree.doubleClicked.connect(self.openEditor)
 
 		for x in range(self.files.columnCount() - 1):
 			self.tree.resizeColumnToContents(x)
@@ -92,21 +83,27 @@ class SnippetSidebar(SidebarWidget):
 	def headerWidget(self):
 		return self._headerWidget
 
-	def contextMenu(self, position):
+	def contextMenu(self, position: QPoint):
 		menu = QMenu()
 
-		run = menu.addAction("Run")
-		# run.triggered.connect(self.runSnippet)
+		index = self.tree.indexAt(position)
 
-		menu.addSeparator()
-		copyPath = menu.addAction("Copy Path")
-		copyPath.triggered.connect(self.copyPath)
-		duplicate = menu.addAction("Duplicate")
-		# duplicate.triggered.connect(self.duplicateSnippet)
-		delete = menu.addAction("Delete")
-		delete.triggered.connect(self.deleteSnippet)
+		if index.isValid():
+			run = menu.addAction("Run")
+			run.triggered.connect(self.runSnippet)
 
-		menu.addSeparator()
+			menu.addSeparator()
+			editInNew = menu.addAction("Edit in New Pane")
+			editInNew.triggered.connect(self.openSnippetInNewPane)
+			copyPath = menu.addAction("Copy Path")
+			copyPath.triggered.connect(self.copyPath)
+			duplicate = menu.addAction("Duplicate")
+			# duplicate.triggered.connect(self.duplicateSnippet)
+			delete = menu.addAction("Delete")
+			delete.triggered.connect(self.deleteSnippet)
+
+			menu.addSeparator()
+
 		newFolder = menu.addAction("New Folder")
 		newFolder.triggered.connect(self.newFolder)
 
@@ -119,7 +116,6 @@ class SnippetSidebar(SidebarWidget):
 		clip.setText(selection)
 
 	def deleteSnippet(self):
-		# index = self.tree.selectedIndexes()[::self.files.columnCount() - 1][0] # treeview returns each selected element in the row
 		index = self.tree.selectionModel().currentIndex()
 		snippetName = self.files.fileName(index)
 
@@ -152,19 +148,42 @@ class SnippetSidebar(SidebarWidget):
 			else:
 				QDir(str(SNIPPETS_PATH.resolve())).mkdir(folderName)
 
-	def openSnippet(self, index):
+	def openEditor(self, index: QModelIndex, force_new=False):
+		global EDITORS
 		if self.files.isDir(index):
 			return
 
+		if len(EDITORS) > 0 and not force_new:
+			editor = EDITORS[-1]
+		else:
+			editor = Editor.createPane(getContext())
+
+		try:
+			editor.openSnippet(self.files.filePath(index))
+		except ValueError:
+			return
+		except RuntimeError:
+			# The editor object got deleted from memory
+			if len(EDITORS) > 0:
+				EDITORS.remove(editor)
+				del editor
+			return self.openEditor(index)
+
 		self.tree.clearSelection()
-		# self.tree.selectionModel().select(index, QAbstractItemView.Select | QAbstractItemView.Rows)
-		editor = Editor.createPane(getContext())
-		editor.openSnippet(self.files.filePath(index))
-		# self.selectFile(self.tree.selectionModel().selection(), None)
-		# self.edit.setFocus()
-		# cursor = self.edit.textCursor()
-		# cursor.setPosition(self.edit.document().characterCount()-1)
-		# self.edit.setTextCursor(cursor)
+
+	def openSnippetInNewPane(self):
+		index = self.tree.selectionModel().currentIndex()
+		self.openEditor(index, force_new=True)
+
+	def runSnippet(self):
+		index = self.tree.selectionModel().currentIndex()
+
+		try:
+			snippet = load_snippet(self.files.filePath(index))
+		except ValueError:
+			return
+
+		snippet.run()
 
 
 class SnippetSidebarType(SidebarWidgetType):
@@ -183,17 +202,6 @@ class SnippetSidebarType(SidebarWidgetType):
 
 	def createWidget(self, frame, data):
 		return SnippetSidebar(frame, data)
-
-
-class SnippetModel(QFileSystemModel):
-	def data(self, index: QModelIndex | QPersistentModelIndex, role: int = ...) -> Any:
-		parent = super().data(index, role)
-
-		if self.isDir(index):
-			return parent
-
-		# bn.log.log_info(f"{index.row()}, {index.column()}: {parent}")
-		return parent
 
 
 Sidebar.addSidebarWidgetType(SnippetSidebarType())

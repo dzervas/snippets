@@ -142,10 +142,11 @@ bnstyles = {
 class QCodeEditor(QPlainTextEdit):
 	class NumberBar(QWidget):
 
-		def __init__(self, editor):
+		def __init__(self, editor, offset: int=0):
 			QWidget.__init__(self, editor)
 			global bnstyles
 
+			self.offset = offset
 			self.editor = editor
 			self.editor.blockCountChanged.connect(self.updateWidth)
 			self.editor.updateRequest.connect(self.updateContents)
@@ -179,7 +180,7 @@ class QCodeEditor(QPlainTextEdit):
 
 				# Draw the line number right justified at the position of the line.
 				paint_rect = QRect(0, block_top, self.width(), self.editor.fontMetrics().height())
-				painter.drawText(paint_rect, Qt.AlignLeft, str(blockNumber+3)) # Offset so that the lines are correct to the file
+				painter.drawText(paint_rect, Qt.AlignLeft, str(blockNumber + self.offset + 1)) # Offset so that the lines are correct to the file
 
 				block = block.next()
 

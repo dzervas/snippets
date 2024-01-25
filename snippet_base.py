@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import List, NamedTuple, Optional, Self, Type, Union
+from typing import List, NamedTuple, Optional, Type, Union
 import binaryninja as bn
 import json
 
@@ -93,7 +93,7 @@ class Snippet():
 			f.write(self.code)
 
 	@classmethod
-	def load(cls: Type[Self], path: Union[str, Path]) -> Self:
+	def load(cls: Type["Snippet"], path: Union[str, Path]) -> "Snippet":
 		if not isinstance(path, Path):
 			path = Path(path)
 
@@ -107,7 +107,7 @@ class Snippet():
 		result = {}
 
 		index = 0
-		for line in self.code.splitlines():
+		for line in self.code.strip().splitlines():
 			stripped = line.strip()
 
 			if not stripped.startswith(self.comment_line_start) or not stripped.endswith(self.comment_line_end):
@@ -153,8 +153,21 @@ class Snippet():
 		new_code_lines = comments.extend(self.code.splitlines()[replace_lines:])
 		self.code = "\n".join(new_code_lines)
 
+	@property
+	def renderableCode(self) -> str:
+		offset = 0
+		lines = self.code.strip().splitlines()
+		for line in lines:
+			stripped = line.strip()
+
+			if stripped.startswith(self.comment_line_start) and stripped.endswith(self.comment_line_end):
+				offset += 1
+				lines = lines[1:]
+
+		return (offset, "\n".join(lines))
+
 	@staticmethod
-	def register(snippet_type: Type[Self]) -> None:
+	def register(snippet_type: Type["Snippet"]) -> None:
 		_SNIPPET_TYPES.append(snippet_type)
 
 
