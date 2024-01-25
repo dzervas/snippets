@@ -50,10 +50,10 @@ class PythonSnippet(Snippet):
 
 	def runner(self, **kwargs) -> None:
 		snippetGlobals = self.setup_globals()
-		snippetGlobals["inputs"] = namedtuple("inputs", kwargs.keys())(kwargs.values())
+		snippetGlobals["inputs"] = namedtuple("inputs", kwargs.keys())(*kwargs.values())
 
-		if self.context.binaryView:
-			self.context.binaryView.begin_undo_actions()
+		if self.context().binaryView:
+			self.context().binaryView.begin_undo_actions()
 
 		exec("from binaryninja import *", snippetGlobals)
 		exec(self.code, snippetGlobals)
@@ -61,13 +61,13 @@ class PythonSnippet(Snippet):
 		# if gUpdateAnalysisOnRun:
 		# 	exec("bv.update_analysis_and_wait()", snippetGlobals)
 
-		if self.context.binaryView:
+		if self.context().binaryView:
 			if "here" in snippetGlobals and hasattr(self.context, "address") and snippetGlobals['here'] != self.context.address:
-				self.context.binaryView.file.navigate(self.context.binaryView.file.view, snippetGlobals['here'])
+				self.context().binaryView.file.navigate(self.context().binaryView.file.view, snippetGlobals['here'])
 
 			if "current_address" in snippetGlobals and hasattr(self.context, "address") and snippetGlobals['current_address'] != self.context.address:
-				self.context.binaryView.file.navigate(self.context.binaryView.file.view, snippetGlobals['current_address'])
+				self.context().binaryView.file.navigate(self.context.binaryView.file.view, snippetGlobals['current_address'])
 
-			self.context.binaryView.commit_undo_actions()
+			self.context().binaryView.commit_undo_actions()
 
 Snippet.register(PythonSnippet)

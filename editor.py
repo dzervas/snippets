@@ -10,12 +10,13 @@ from PySide6.QtGui import QKeySequence, QIcon, QFontMetrics, QWindow
 from PySide6.QtCore import Qt, QSettings, QFileSystemWatcher, QItemSelectionModel
 
 from .QCodeEditor import QCodeEditor, Pylighter
-from .snippet_base import SNIPPETS_PATH
+from .snippet_base import SNIPPETS_PATH, load_snippet
 
 class Editor(QWidget):
 	def __init__(self, context: ui.UIContext, parent: QWidget | None = None) -> None:
 		QWidget.__init__(self, parent)
 
+		self.snippet = None
 		self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 		self.title = QLabel(self.tr("Snippet Editor"))
 		self.setWindowTitle(self.title.text())
@@ -112,7 +113,7 @@ class Editor(QWidget):
 		# Add signals
 		# self.saveButton.clicked.connect(self.save)
 		# self.editButton.clicked.connect(self.editor)
-		# self.runButton.clicked.connect(self.run)
+		self.runButton.clicked.connect(lambda: self.snippet.run(self.context) if self.snippet else None)
 		# self.exportButton.clicked.connect(self.export)
 		# self.clearHotkeyButton.clicked.connect(self.clearHotkey)
 		# self.tree.selectionModel().selectionChanged.connect(self.selectFile)
@@ -160,8 +161,8 @@ class Editor(QWidget):
 		return True
 
 	def openSnippet(self, path: Union[Path, str]):
-		if not isinstance(path, Path):
-			path = Path(path)
+		self.snippet = load_snippet(path)
+		bn.log.log_info(f"{self.snippet}")
 
 		self.edit.clear()
-		self.edit.setPlainText(path.read_text())
+		self.edit.setPlainText(self.snippet.code)
