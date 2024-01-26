@@ -11,7 +11,7 @@ from .snippet_base import SNIPPETS_PATH, load_all_snippets, load_snippet
 
 class SnippetSidebar(SidebarWidget):
 	def __init__(self, frame, data):
-		SidebarWidget.__init__(self, "Snippet Editor")
+		SidebarWidget.__init__(self, "Snippets")
 		self.frame = frame
 		self.data = data
 		snippets_path_abs = str(SNIPPETS_PATH.resolve())
@@ -198,7 +198,7 @@ class SnippetSidebarType(SidebarWidgetType):
 		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "S")
 		p.end()
 
-		SidebarWidgetType.__init__(self, icon, "Snippet Editor")
+		SidebarWidgetType.__init__(self, icon, "Snippets")
 
 	def createWidget(self, frame, data):
 		return SnippetSidebar(frame, data)

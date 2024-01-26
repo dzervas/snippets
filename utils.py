@@ -1,7 +1,8 @@
 from collections import namedtuple
 from binaryninjaui import UIContext
-from PySide6.QtCore import QLine, QRectF, QLineF
-from PySide6.QtGui import QImage, QPainter, QPen, QColor
+from PySide6.QtCore import QLine, QRectF, QLineF, QPointF, Qt
+from PySide6.QtGui import QImage, QPainter, QPen, QColor, QPainterPath
+import math
 
 def getContext():
 	ctx = UIContext.activeContext()
@@ -59,6 +60,24 @@ def makePlusMenuIcon() -> QImage:
 	painter.drawLine(horizontal_line)
 	vertical_line = QLine(28, 12, 28, 44)
 	painter.drawLine(vertical_line)
+
+	painter.end()
+
+	return icon
+
+def makePlayIcon(scale: float = 1.0) -> QImage:
+	size = 56 * scale
+	icon = QImage(size, size, QImage.Format.Format_RGB32)
+	icon.fill(0)
+
+	painter = QPainter()
+	painter.begin(icon)
+	painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+	painter.setPen(QPen(QColor("white"), 5))
+
+	painter.drawLine(QLineF(12 + 0.1 * size, 12, 44 - 0.1 * size, size / 2))
+	painter.drawLine(QLineF(44 - 0.1 * size, size / 2, 12 + 0.1 * size, size - 12))
+	painter.drawLine(QLineF(12 + 0.1 * size, 12, 12 + 0.1 * size, size - 12))
 
 	painter.end()
 

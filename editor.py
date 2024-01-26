@@ -1,16 +1,16 @@
 from pathlib import Path
-import sys
 from typing import List, Union
 import binaryninja as bn
 import binaryninjaui as ui
 
 from binaryninja.settings import Settings
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QCheckBox, QKeySequenceEdit, QLineEdit, QHBoxLayout, QVBoxLayout, QLayout
 from PySide6.QtGui import QKeySequence, QFontMetrics
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import Qt, QSettings, QSize
 
 from .QCodeEditor import QCodeEditor
 from .snippet_base import SNIPPETS_PATH, load_snippet
+from .utils import makePlayIcon
 
 
 class Editor(QWidget):
@@ -153,10 +153,31 @@ class Editor(QWidget):
 
 		widget.destroyed.connect(onEditorClose)
 
-		# if not context.binaryView:
-			# pane.moveToNewWindow()
+		# if not hasattr(context, "binaryView"):
+		# 	pane.setWindowModality(Qt.WindowModal)
+
+		found = False
+		for child in pane.children():
+			bn.log_info(f"{child}")
+			for subChild in child.children():
+				bn.log_info(f"\t{subChild}")
+				if isinstance(subChild, ui.PaneHeader):
+					found = True
+
+					# TODO: Make the play button scalable by settings
+					play = ui.ClickableIcon(makePlayIcon(), QSize(20, 20))
+					play.clicked.connect(lambda: widget.snippet.run(context) if widget.snippet else None)
+					subChild.layout().addWidget(play)
+
+					for subSubChild in subChild.children()[0].children():
+						bn.log_info(f"\t\t{subSubChild}")
+					break
+
+			if found:
+				break
 
 		context.context.openPane(pane)
+		# pane.setIsActivePane(True)
 		return widget
 
 	@staticmethod
