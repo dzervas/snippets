@@ -167,10 +167,9 @@ class Editor(QWidget):
 					# TODO: Make the play button scalable by settings
 					play = ui.ClickableIcon(makePlayIcon(), QSize(20, 20))
 					play.clicked.connect(lambda: widget.snippet.run(context) if widget.snippet else None)
+					# TODO: Make the play button a stop button when the snippet is running and back to play when it's done
 					subChild.layout().addWidget(play)
 
-					for subSubChild in subChild.children()[0].children():
-						bn.log_info(f"\t\t{subSubChild}")
 					break
 
 			if found:

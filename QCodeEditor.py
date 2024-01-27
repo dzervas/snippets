@@ -29,11 +29,11 @@ class QFormatter(Formatter):
 		for token, style in self.style:
 			tokenname = str(token)
 			if tokenname in bnstyles.keys():
-				self.pygstyles[str(token)]=bnstyles[tokenname]
+				self.pygstyles[str(token)] = bnstyles[tokenname]
 				#log_warn("MATCH: %s with %s" % (tokenname, str(token)))
 			else:
-				self.pygstyles[str(token)]=bnstyles['Token.Name']
-				#log_warn("NONE: %s with %s" % (tokenname, str(token)))
+				self.pygstyles[str(token)] = bnstyles['Token.Name']
+				log_warn("NONE: %s with %s" % (tokenname, str(token)))
 
 	def format(self, tokensource, outfile):
 		self.data=[]

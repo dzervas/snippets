@@ -5,7 +5,7 @@ from PySide6.QtGui import QImage, QPainter, QColor, QFont, QCursor, QGuiApplicat
 from PySide6.QtWidgets import QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter
 
 from .editor import Editor, EDITORS
-from .utils import getContext, makePlusMenuIcon, makeReloadIcon
+from .utils import getContext, makePlusMenuIcon, makeReloadIcon, makeSnippetsIcon
 from .snippet_base import SNIPPETS_PATH, load_all_snippets, load_snippet
 
 
@@ -188,17 +188,7 @@ class SnippetSidebar(SidebarWidget):
 
 class SnippetSidebarType(SidebarWidgetType):
 	def __init__(self):
-		icon = QImage(56, 56, QImage.Format_RGB32)
-		icon.fill(0)
-
-		p = QPainter()
-		p.begin(icon)
-		p.setFont(QFont("Open Sans", 56))
-		p.setPen(QColor(255, 255, 255, 255))
-		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "S")
-		p.end()
-
-		SidebarWidgetType.__init__(self, icon, "Snippets")
+		SidebarWidgetType.__init__(self, makeSnippetsIcon(), "Snippets")
 
 	def createWidget(self, frame, data):
 		return SnippetSidebar(frame, data)
