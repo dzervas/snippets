@@ -1,7 +1,7 @@
 from collections import namedtuple
 from binaryninjaui import UIContext
 from PySide6.QtCore import QLine, QRectF, QLineF, QRect, Qt
-from PySide6.QtGui import QImage, QPainter, QPen, QColor, QFont
+from PySide6.QtGui import QImage, QPainter, QPen, QColor, QFont, QPainterPath
 import math
 
 def getContext():
@@ -152,6 +152,35 @@ def makeSnippetsIcon() -> QImage:
 	painter.setFont(QFont("Open Sans", 10))
 	painter.setPen(QPen(QColor("gray"), 3))
 	painter.drawText(QRect(0, 0, 56, 56), Qt.AlignCenter, "hi")
+	painter.end()
+
+	return icon
+
+def makeFloppyIcon() -> QImage:
+	icon = QImage(56, 56, QImage.Format_RGB32)
+	icon.fill(0)
+
+	painter = QPainter()
+	painter.begin(icon)
+	painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+	painter.setPen(QPen(QColor("white"), 5))
+
+	# Outline
+	path = QPainterPath()
+	path.moveTo(12, 44)
+	path.lineTo(12, 12)
+	path.lineTo(36, 12)
+	path.lineTo(44, 20)
+	path.lineTo(44, 44)
+	path.lineTo(12, 44)
+	painter.drawPath(path)
+
+	# Top rectangle
+	painter.drawRect(QRect(18, 12, 12, 8))
+
+	# Center circle (actually 4 pixels off center on the Y)
+	painter.drawEllipse(QRect(24, 28, 8, 8))
+
 	painter.end()
 
 	return icon

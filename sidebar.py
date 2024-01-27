@@ -1,7 +1,7 @@
 import binaryninja as bn
 from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, ClickableIcon
-from PySide6.QtCore import QModelIndex, QPoint, Qt, QFileSystemWatcher, QRectF, QSize, QDir, QFileInfo
-from PySide6.QtGui import QImage, QPainter, QColor, QFont, QCursor, QGuiApplication
+from PySide6.QtCore import QModelIndex, QPoint, Qt, QFileSystemWatcher, QSize, QDir, QFileInfo, QSettings, QItemSelectionModel
+from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QFileSystemModel, QTreeView, QAbstractItemView, QHeaderView, QHBoxLayout, QVBoxLayout, QWidget, QLineEdit, QMenu, QMessageBox, QInputDialog, QSplitter
 
 from .editor import Editor, EDITORS
@@ -14,6 +14,7 @@ class SnippetSidebar(SidebarWidget):
 		SidebarWidget.__init__(self, "Snippets")
 		self.frame = frame
 		self.data = data
+		self.resetting = False
 		snippets_path_abs = str(SNIPPETS_PATH.resolve())
 
 		self.watcher = QFileSystemWatcher()
@@ -79,6 +80,9 @@ class SnippetSidebar(SidebarWidget):
 		self.headerWidgetLayout.addWidget(self.addButton)
 		self._headerWidget = QWidget()
 		self._headerWidget.setLayout(self.headerWidgetLayout)
+
+
+		self.settings = QSettings("Vector 35", "Snippet Editor")
 
 	def headerWidget(self):
 		return self._headerWidget

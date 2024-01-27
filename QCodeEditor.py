@@ -33,7 +33,7 @@ class QFormatter(Formatter):
 				#log_warn("MATCH: %s with %s" % (tokenname, str(token)))
 			else:
 				self.pygstyles[str(token)] = bnstyles['Token.Name']
-				log_warn("NONE: %s with %s" % (tokenname, str(token)))
+				# log_warn("NONE: %s with %s" % (tokenname, str(token)))
 
 	def format(self, tokensource, outfile):
 		self.data=[]

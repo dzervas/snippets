@@ -89,6 +89,7 @@ class Snippet():
 		return context
 
 	def save(self) -> None:
+		bn.log_info(f"Saving snippet '{self.name}'...")
 		with open(SNIPPETS_PATH / self.name, "w") as f:
 			f.write(self.code)
 
@@ -110,7 +111,7 @@ class Snippet():
 		for line in self.code.strip().splitlines():
 			stripped = line.strip()
 
-			if not stripped.startswith(self.comment_line_start) or not stripped.endswith(self.comment_line_end):
+			if index > 1 and not (stripped.startswith(self.comment_line_start) and stripped.endswith(self.comment_line_end)):
 				break
 
 			data = stripped[len(self.comment_line_start):-len(self.comment_line_end)].strip()
@@ -136,7 +137,7 @@ class Snippet():
 
 	@metadata.setter
 	def metadata(self, value: dict) -> None:
-		old_keys = self.metadata.keys()
+		old_keys = self.metadata._asdict().keys()
 		replace_lines = len(old_keys)
 
 		comments = [
@@ -153,16 +154,27 @@ class Snippet():
 		new_code_lines = comments.extend(self.code.splitlines()[replace_lines:])
 		self.code = "\n".join(new_code_lines)
 
+	def updateCode(self, code: str) -> None:
+		old_lines = self.code.strip().splitlines()
+		metadata_count = len(self.metadata._asdict().keys())
+		lines = code.strip().splitlines()
+		bn.log_info(f"Updating snippet '{self.name}' {self.metadata} {metadata_count}...")
+
+		if metadata_count > 0:
+			new_lines = list(old_lines[:metadata_count])
+			new_lines.extend(lines)
+			lines = new_lines
+
+		self.code = "\n".join(lines)
+
 	@property
 	def renderableCode(self) -> str:
 		offset = 0
 		lines = self.code.strip().splitlines()
-		for line in lines:
-			stripped = line.strip()
+		metadata_count = len(self.metadata._asdict().keys())
 
-			if stripped.startswith(self.comment_line_start) and stripped.endswith(self.comment_line_end):
-				offset += 1
-				lines = lines[1:]
+		if metadata_count > 0:
+			lines = lines[metadata_count:]
 
 		return (offset, "\n".join(lines))
 
