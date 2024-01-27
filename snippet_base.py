@@ -158,7 +158,6 @@ class Snippet():
 		old_lines = self.code.strip().splitlines()
 		metadata_count = len(self.metadata._asdict().keys())
 		lines = code.strip().splitlines()
-		bn.log_info(f"Updating snippet '{self.name}' {self.metadata} {metadata_count}...")
 
 		if metadata_count > 0:
 			new_lines = list(old_lines[:metadata_count])

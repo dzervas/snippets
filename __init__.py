@@ -6,6 +6,15 @@ from .sidebar import SnippetSidebar as _
 from .snippet_base import load_all_snippets, run_last_snippet
 from .python_snippet import PythonSnippet as _
 
+bn.Settings().register_group("snippets", "Snippets")
+bn.Settings().register_setting("snippets.indentation", """{
+	"title" : "Indentation Syntax Highlighting",
+	"type" : "string",
+	"default" : "    ",
+	"description" : "String to use for indentation in snippets (tip: to use a tab, copy/paste a tab from another text field and paste here)",
+	"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+}""")
+
 load_all_snippets()
 
 ui.UIAction.registerAction("Snippets\\Snippet Editor...")
